@@ -1165,13 +1165,34 @@ static int dict_read_process_struct(dict_tokenize_ctx_t *ctx, char **argv, int a
 	}
 
 	/*
-	 *	This SHOULD be the "key" field.
+	 *	Unwind the stack until we find a parent which has a child named "key_attr"
 	 */
-	parent = dict_attr_by_name(NULL, ctx->stack[ctx->stack_depth].da, key_attr);
-	if (!parent) {
-		fr_strerror_printf("Unknown attribute '%s' in context %s", key_attr,
-				   ctx->stack[ctx->stack_depth].da->name);
-		return -1;
+	if (ctx->stack_depth > 1) {
+		int i;
+
+		for (i = ctx->stack_depth; i > 0; i--) {
+			parent = dict_attr_by_name(NULL, ctx->stack[i].da, key_attr);
+			if (parent) break;
+		}
+
+		if (!parent) {
+			fr_strerror_printf("Invalid STRUCT definition, unknown key attribute %s",
+					   key_attr);
+			return -1;
+		}
+
+		ctx->stack_depth = i;
+
+	} else {
+		/*
+		 *	This SHOULD be the "key" field.
+		 */
+		parent = dict_attr_by_name(NULL, ctx->stack[0].da, key_attr);
+		if (!parent) {
+			fr_strerror_printf("Unknown attribute '%s' in context %s", key_attr,
+					   ctx->stack[0].da->name);
+			return -1;
+		}
 	}
 
 	if (!da_is_key_field(parent)) {
@@ -1184,44 +1205,6 @@ static int dict_read_process_struct(dict_tokenize_ctx_t *ctx, char **argv, int a
 	 *	da->type is an unsigned integer, AND that da->parent->type == struct
 	 */
 	if (!fr_cond_assert(parent->parent->type == FR_TYPE_STRUCT)) return -1;
-
-	/*
-	 *	The attribute in the current stack frame is NOT the
-	 *	enclosing "struct": unwind until we do find the
-	 *	parent, OR until we hit the root of the dictionary.
-	 */
-	if ((ctx->stack_depth > 1) && (ctx->stack[ctx->stack_depth].da != parent->parent)) {
-		int i;
-		bool found = false;
-
-		for (i = ctx->stack_depth - 1; i > 0; i--) {
-			if ((ctx->stack[i].da == parent->parent) ||
-			    (ctx->stack[i].da->flags.is_root)) {
-				ctx->stack_depth = i;
-				found = true;
-				break;
-			}
-		}
-
-		if (!found) {
-			fr_strerror_printf("Invalid STRUCT definition, unknown key attribute %s",
-					   parent->name);
-			return -1;
-		}
-	}
-
-	/*
-	 *	Allow naked "STRUCT parent name value" definitions, so
-	 *	long as the parent attribute exists.
-	 *
-	 *	The attribute in the current stack frame MUST be the
-	 *	enclosing "struct".
-	 */
-	if (!ctx->stack[ctx->stack_depth].da->flags.is_root &&
-	    (ctx->stack[ctx->stack_depth].da != parent->parent)) {
-		fr_strerror_printf("Attribute '%s' is not a MEMBER of the current 'struct'", key_attr);
-		return -1;
-	}
 
 	memset(&flags, 0, sizeof(flags));
 
