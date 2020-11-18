@@ -22,12 +22,13 @@
  */
 RCSID("$Id$")
 
-#include <freeradius-devel/util/dict_priv.h>
-#include <freeradius-devel/util/syserror.h>
-#include <freeradius-devel/util/rand.h>
-#include <freeradius-devel/util/talloc.h>
-#include <freeradius-devel/util/conf.h>
 #include <freeradius-devel/radius/defs.h>
+#include <freeradius-devel/util/conf.h>
+#include <freeradius-devel/util/dict_priv.h>
+#include <freeradius-devel/util/file.h>
+#include <freeradius-devel/util/rand.h>
+#include <freeradius-devel/util/syserror.h>
+#include <freeradius-devel/util/talloc.h>
 
 #include <sys/stat.h>
 #include <ctype.h>
@@ -1542,7 +1543,8 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			da = dict_attr_by_name(NULL, this->parent, this->attribute);
 			if (!da) {
 				fr_strerror_printf("ATTRIBUTE '%s' not found in context %s.  Referenced by VALUE '%s' at %s[%d]",
-						   this->attribute, this->parent->name, this->name, this->filename, this->line);
+						   this->attribute, this->parent->name, this->name,
+						   fr_cwd_strip(this->filename), this->line);
 				return -1;
 			}
 			type = da->type;
@@ -1550,7 +1552,8 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			if (fr_value_box_from_str(this, &value, &type, NULL,
 						  this->value, talloc_array_length(this->value) - 1, '\0', false) < 0) {
 				fr_strerror_printf_push("Invalid VALUE for Attribute '%s' at %s[%d]",
-							da->name, this->filename, this->line);
+							da->name,
+							fr_cwd_strip(this->filename), this->line);
 				return -1;
 			}
 
@@ -1653,7 +1656,8 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			if (slen < 0) {
 			invalid_reference:
 				fr_strerror_printf("Invalid reference '%s' at %s[%d]",
-						 this->ref, this->filename, this->line);
+						   this->ref,
+						   fr_cwd_strip(this->filename), this->line);
 			group_error:
 				/*
 				 *	Just so we don't lose track of things.
@@ -1676,20 +1680,20 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			da = dict_attr_by_name(NULL, fr_dict_root(dict), this->ref + slen + 1);
 			if (!da) {
 				fr_strerror_printf("No such attribute '%s' in reference at %s[%d]",
-						   this->ref + slen + 1, this->filename, this->line);
+						   this->ref + slen + 1, fr_cwd_strip(this->filename), this->line);
 				goto group_error;
 			}
 
 		check:
 			if (da->type != FR_TYPE_TLV) {
 				fr_strerror_printf("References MUST be to attributes of type 'tlv' at %s[%d]",
-					this->filename, this->line);
+						   fr_cwd_strip(this->filename), this->line);
 				goto group_error;
 			}
 
 			if (fr_dict_attr_ref(da)) {
 				fr_strerror_printf("References MUST NOT refer to an ATTRIBUTE which also has 'ref=...' at %s[%d]",
-					this->filename, this->line);
+						   fr_cwd_strip(this->filename), this->line);
 				goto group_error;
 			}
 
@@ -1824,7 +1828,7 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 			fr_strerror_printf_push("Couldn't open dictionary %s: %s", fr_syserror(errno), fn);
 		} else {
 			fr_strerror_printf_push("Error reading dictionary: %s[%d]: Couldn't open dictionary '%s': %s",
-						src_file, src_line, fn,
+						fr_cwd_strip(src_file), src_line, fn,
 						fr_syserror(errno));
 		}
 		return -2;
@@ -1889,7 +1893,7 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 			fr_strerror_printf("Invalid entry");
 
 		error:
-			fr_strerror_printf_push("Error reading %s[%d]", fn, line);
+			fr_strerror_printf_push("Error reading %s[%d]", fr_cwd_strip(fn), line);
 			fclose(fp);
 			return -1;
 		}
@@ -2026,13 +2030,14 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 			}
 
 			if (ret < 0) {
-				fr_strerror_printf_push("from $INCLUDE at %s[%d]", fn, line);
+				fr_strerror_printf_push("from $INCLUDE at %s[%d]", fr_cwd_strip(fn), line);
 				fclose(fp);
 				return -1;
 			}
 
 			if (ctx->stack_depth < stack_depth) {
-				fr_strerror_printf_push("unexpected END-??? in $INCLUDE at %s[%d]", fn, line);
+				fr_strerror_printf_push("unexpected END-??? in $INCLUDE at %s[%d]",
+							fr_cwd_strip(fn), line);
 				fclose(fp);
 				return -1;
 			}
@@ -2043,7 +2048,8 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 					continue;
 				}
 
-				fr_strerror_printf_push("BEGIN-??? without END-... in file $INCLUDEd from %s[%d]", fn, line);
+				fr_strerror_printf_push("BEGIN-??? without END-... in file $INCLUDEd from %s[%d]",
+							fr_cwd_strip(fn), line);
 				fclose(fp);
 				return -1;
 			}
