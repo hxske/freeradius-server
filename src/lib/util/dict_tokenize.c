@@ -1538,8 +1538,8 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			next = this->next;
 			da = dict_attr_by_name(NULL, this->parent, this->attribute);
 			if (!da) {
-				fr_strerror_printf("No ATTRIBUTE '%s' defined for VALUE '%s' at %s[%d]",
-						   this->attribute, this->name, this->filename, this->line);
+				fr_strerror_printf("ATTRIBUTE '%s' not found in context %s.  Referenced by VALUE '%s' at %s[%d]",
+						   this->attribute, this->parent->name, this->name, this->filename, this->line);
 				return -1;
 			}
 			type = da->type;
