@@ -1066,7 +1066,7 @@ static int _fr_snmp_init(fr_snmp_map_t map[])
 
 			fr_assert(map[i].child);
 
-			map[i].da = fr_dict_attr_by_name(dict_snmp, map[i].name);
+			map[i].da = fr_dict_attr_by_name(NULL, fr_dict_root(dict_snmp), map[i].name);
 			if (!map[i].da) {
 				ERROR("Incomplete dictionary: Missing definition for \"%s\"", map[i].name);
 				return -1;
@@ -1078,7 +1078,7 @@ static int _fr_snmp_init(fr_snmp_map_t map[])
 			continue;
 		}
 
-		map[i].da = fr_dict_attr_by_name(dict_snmp, map[i].name);
+		map[i].da = fr_dict_attr_by_name(NULL, fr_dict_root(dict_snmp), map[i].name);
 		if (!map[i].da) {
 			ERROR("Incomplete dictionary: Missing definition for \"%s\"", map[i].name);
 			return -1;

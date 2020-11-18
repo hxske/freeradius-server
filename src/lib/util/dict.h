@@ -120,10 +120,11 @@ typedef enum {
 	FR_DICT_ATTR_EXT_NAME = 0,				//!< Name of the attribute.
 	FR_DICT_ATTR_EXT_CHILDREN,				//!< Attribute has children.
 	FR_DICT_ATTR_EXT_REF,					//!< Attribute references another
-								///< attribute and/or dictionary
+								///< attribute and/or dictionary.
 	FR_DICT_ATTR_EXT_VENDOR,				//!< Cached vendor pointer.
 	FR_DICT_ATTR_EXT_DA_STACK,				//!< Cached da stack.
 	FR_DICT_ATTR_EXT_ENUMV,					//!< Enumeration values.
+	FR_DICT_ATTR_EXT_NAMESPACE,				//!< Attribute has its own namespace.
 	FR_DICT_ATTR_EXT_PROTOCOL_SPECIFIC,			//!< Protocol specific extensions
 	FR_DICT_ATTR_EXT_MAX
 } fr_dict_attr_ext_t;
@@ -443,9 +444,10 @@ fr_dict_vendor_t const	*fr_dict_vendor_by_num(fr_dict_t const *dict, uint32_t ve
 fr_dict_attr_t const	*fr_dict_vendor_da_by_num(fr_dict_attr_t const *vendor_root, uint32_t vendor_pen);
 
 ssize_t			fr_dict_attr_by_name_substr(fr_dict_attr_err_t *err, fr_dict_attr_t const **out,
-						    fr_dict_t const *dict, fr_sbuff_t *name) CC_HINT(nonnull(2,4));
+						    fr_dict_attr_t const *parent, fr_sbuff_t *name) CC_HINT(nonnull(2,3,4));
 
-fr_dict_attr_t const	*fr_dict_attr_by_name(fr_dict_t const *dict, char const *attr);
+fr_dict_attr_t const	*fr_dict_attr_by_name(fr_dict_attr_err_t *err, fr_dict_attr_t const *parent, char const *attr)
+			CC_HINT(nonnull(2,3));
 
 ssize_t			fr_dict_attr_by_qualified_name_substr(fr_dict_attr_err_t *err, fr_dict_attr_t const **out,
 							      fr_dict_t const *dict_def,

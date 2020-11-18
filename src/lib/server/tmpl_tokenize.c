@@ -3274,7 +3274,7 @@ int tmpl_attr_unresolved_add(fr_dict_t *dict_def, tmpl_t *vpt,
 			     fr_dict_root(fr_dict_internal()), tmpl_attr_unresolved(vpt), -1, type, flags) < 0) {
 		return -1;
 	}
-	da = fr_dict_attr_by_name(dict_def, tmpl_attr_unresolved(vpt));
+	da = fr_dict_attr_by_name(NULL, fr_dict_root(dict_def), tmpl_attr_unresolved(vpt));
 	if (!da) return -1;
 
 	if (type != da->type) {
@@ -3898,7 +3898,7 @@ void tmpl_verify(char const *file, int line, tmpl_t const *vpt)
 						     fr_table_str_by_value(fr_value_box_type_table, tmpl_da(vpt)->type, "<INVALID>"));
 			}
 
-			da = fr_dict_attr_by_name(dict, tmpl_da(vpt)->name);
+			da = fr_dict_attr_by_name(NULL, fr_dict_root(dict), tmpl_da(vpt)->name);
 			if (!da) {
 				if (!tmpl_da(vpt)->flags.is_unknown) {
 					fr_fatal_assert_fail("CONSISTENCY CHECK FAILED %s[%u]: TMPL_TYPE_ATTR "
