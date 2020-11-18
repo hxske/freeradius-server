@@ -872,6 +872,9 @@ static int dict_read_process_attribute(dict_tokenize_ctx_t *ctx, char **argv, in
 	 */
 	if (type == FR_TYPE_STRUCT) {
 		if (dict_gctx_push(ctx, da) < 0) return -1;
+		ctx->value_attr = NULL;
+	} else {
+		memcpy(&ctx->value_attr, &da, sizeof(da));
 	}
 
 	return 0;
