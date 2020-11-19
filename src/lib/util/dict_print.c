@@ -150,12 +150,15 @@ static int dict_attr_debug(fr_dict_attr_t const *da, void *uctx)
 	for (enumv = fr_hash_table_iter_init(ext->name_by_value, &iter);
 	     enumv;
 	     enumv = fr_hash_table_iter_next(ext->name_by_value, &iter)) {
-		FR_FAULT_LOG("[%02i] 0x%016" PRIxPTR "%*s%s -> %pV",
+	     	char *value = fr_asprintf(NULL, "%pV", enumv->value);
+
+		FR_FAULT_LOG("[%02i] 0x%016" PRIxPTR "%*s%s -> %s",
 			     da->depth,
 			     (unsigned long)da,
 			     ((da->depth + 1) - our_uctx->start_depth) * 4, "",
 			     enumv->name,
-			     enumv->value);
+			     value);
+		talloc_free(value);
 	}
 
 	return 0;
