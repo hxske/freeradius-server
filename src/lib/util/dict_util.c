@@ -367,7 +367,7 @@ static inline CC_HINT(always_inline) int dict_attr_name_set(fr_dict_attr_t **da_
 
 		fr_sbuff_in_strcpy_literal(&unknown_name, "Attr-");
 		if (da->parent) {
-			if (fr_dict_print_attr_oid(&unknown_name, NULL, da->parent) > 0) {
+			if (fr_dict_attr_oid_print(&unknown_name, NULL, da->parent) > 0) {
 				fr_sbuff_in_char(&unknown_name, '.');
 			}
 		}
@@ -1710,7 +1710,7 @@ ssize_t fr_dict_oid_component(fr_dict_attr_err_t *err,
 	case FR_SBUFF_PARSE_OK:
 		child = dict_attr_child_by_num(parent, num);
 		if (!child) {
-			fr_strerror_printf("Couldn't resolve child %u in parent '%s'",
+			fr_strerror_printf("Failed resolving child %u in context %s",
 					   num, parent->name);
 			if (err) *err = FR_DICT_ATTR_NOTFOUND;
 			fr_sbuff_set(in, &start);		/* Reset to start of number */
@@ -1730,7 +1730,7 @@ ssize_t fr_dict_oid_component(fr_dict_attr_err_t *err,
 
 		slen = fr_dict_attr_by_name_substr(&our_err, &child, parent, in);
 		if (our_err != FR_DICT_ATTR_OK) {
-			fr_strerror_printf("Couldn't resolve \"%.*s\" in parent '%s'",
+			fr_strerror_printf("Failed resolving \"%.*s\" in context %s",
 					   (int)fr_sbuff_remaining(in),
 					   fr_sbuff_current(in),
 					   parent->name);
@@ -1765,18 +1765,23 @@ ssize_t fr_dict_oid_component(fr_dict_attr_err_t *err,
  *	- >0 the number of bytes consumed.
  *	- <= 0 Parse error occurred here.
  */
-ssize_t fr_dict_attr_by_oid(fr_dict_attr_err_t *err,
-			    fr_dict_attr_t const **out, fr_dict_attr_t const *parent,
-			    fr_sbuff_t *in)
+ssize_t fr_dict_attr_by_oid_substr(fr_dict_attr_err_t *err,
+				   fr_dict_attr_t const **out, fr_dict_attr_t const *parent,
+				   fr_sbuff_t *in)
 {
 	fr_sbuff_marker_t	start;
 	fr_dict_attr_t const	*our_parent = parent;
 
-	fr_sbuff_next_if_char(in, '.');	/* Skip preceding separator */
+	fr_sbuff_marker(&start, in);
+
+	/*
+	 *	If the OID doesn't begin with '.' we
+	 *	resolve it from the root.
+	 */
+	if (!fr_sbuff_next_if_char(in, '.')) parent = fr_dict_root(fr_dict_by_da(parent));
 
 	*out = NULL;
 
-	fr_sbuff_marker(&start, in);
 	for (;;) {
 		ssize_t			slen;
 		fr_dict_attr_t const	*child;
@@ -1791,6 +1796,25 @@ ssize_t fr_dict_attr_by_oid(fr_dict_attr_err_t *err,
 	}
 
 	return fr_sbuff_marker_release_behind(&start);
+}
+
+/** Resolve an attribute using an OID string
+ *
+ * @param[out] err		The parsing error that occurred.
+ * @param[in] parent		Where to resolve relative attributes from.
+ * @param[in] oid		string to parse.
+ * @return
+ *	- NULL if we couldn't resolve the attribute.
+ *	- The resolved attribute.
+ */
+fr_dict_attr_t const *fr_dict_attr_by_oid(fr_dict_attr_err_t *err, fr_dict_attr_t const *parent, char const *oid)
+{
+	fr_sbuff_t		sbuff = FR_SBUFF_IN(oid, strlen(oid));
+	fr_dict_attr_t const	*da;
+
+	if (fr_dict_attr_by_oid_substr(err, &da, parent, &sbuff) <= 0) return NULL;
+
+	return da;
 }
 
 /** Return the root attribute of a dictionary

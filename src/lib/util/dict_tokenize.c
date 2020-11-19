@@ -577,7 +577,7 @@ static int dict_read_process_alias(dict_tokenize_ctx_t *ctx, char **argv, int ar
 	/*
 	 *	The <src> can be a name.
 	 */
-	da = dict_attr_by_name(NULL, fr_dict_root(ctx->dict), argv[1]);
+	da = fr_dict_attr_by_oid(NULL, fr_dict_root(ctx->dict), argv[1]);
 	if (!da) {
 		fr_strerror_printf("Attribute %s does not exist", argv[1]);
 		return -1;
@@ -735,7 +735,7 @@ static int dict_read_process_attribute(dict_tokenize_ctx_t *ctx, char **argv, in
 	/*
 	 *	TLVs can only refer to attributes in the same dictionary.
 	 */
-	if (ref && (type == FR_TYPE_TLV) && !dict_attr_by_name(NULL, parent, ref)) {
+	if (ref && (type == FR_TYPE_TLV) && !fr_dict_attr_by_oid(NULL, parent, ref)) {
 		fr_strerror_printf("Attributes of type 'tlv' MUST refer to a pre-existing ATTRIBUTE in the same protocol");
 		return -1;
 	}
@@ -779,7 +779,7 @@ static int dict_read_process_attribute(dict_tokenize_ctx_t *ctx, char **argv, in
 			goto check;
 		}
 
-		da = dict_attr_by_name(NULL, parent, ref);
+		da = fr_dict_attr_by_oid(NULL, parent, ref);
 		if (da) {
 			dict = ctx->dict;
 			goto check;
@@ -840,7 +840,7 @@ static int dict_read_process_attribute(dict_tokenize_ctx_t *ctx, char **argv, in
 			/*
 			 *	Look up the attribute.
 			 */
-			da = dict_attr_by_name(NULL, parent, ref + slen);
+			da = fr_dict_attr_by_oid(NULL, parent, ref + slen);
 			if (!da) {
 				fr_strerror_printf("protocol loaded, but no attribute '%s'", ref + slen);
 				talloc_free(ref);
@@ -1040,7 +1040,7 @@ static int dict_read_process_value(dict_tokenize_ctx_t *ctx, char **argv, int ar
 	 *	caching the last attribute for a VALUE.
 	 */
 	if (!ctx->value_attr || (strcasecmp(argv[0], ctx->value_attr->name) != 0)) {
-		ctx->value_attr = dict_attr_by_name(NULL, parent, argv[0]);
+		ctx->value_attr = fr_dict_attr_unconst(fr_dict_attr_by_oid(NULL, parent, argv[0]));
 	}
 	da = ctx->value_attr;
 
@@ -1193,8 +1193,7 @@ static int dict_read_process_struct(dict_tokenize_ctx_t *ctx, char **argv, int a
 		 */
 		parent = dict_attr_by_name(NULL, ctx->stack[0].da, key_attr);
 		if (!parent) {
-			fr_strerror_printf("Unknown attribute '%s' in context %s", key_attr,
-					   ctx->stack[0].da->name);
+			fr_strerror_printf_push("Failed resolving 'key' attribute");
 			return -1;
 		}
 	}
@@ -1540,11 +1539,10 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			int		ret;
 
 			next = this->next;
-			da = dict_attr_by_name(NULL, this->parent, this->attribute);
+			da = fr_dict_attr_unconst(fr_dict_attr_by_oid(NULL, this->parent, this->attribute));
 			if (!da) {
-				fr_strerror_printf("ATTRIBUTE '%s' not found in context %s.  Referenced by VALUE '%s' at %s[%d]",
-						   this->attribute, this->parent->name, this->name,
-						   fr_cwd_strip(this->filename), this->line);
+				fr_strerror_printf_push("Failed resolving ATTRIBUTE referenced by VALUE '%s' at %s[%d]",
+							this->name, fr_cwd_strip(this->filename), this->line);
 				return -1;
 			}
 			type = da->type;
@@ -1611,7 +1609,7 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			char			*p;
 			ssize_t			slen;
 
-			da = dict_attr_by_name(NULL, fr_dict_root(ctx->dict), this->ref);
+			da = fr_dict_attr_by_oid(NULL, fr_dict_root(ctx->dict), this->ref);
 			if (da) {
 				dict = ctx->dict;
 				goto check;
@@ -1677,7 +1675,7 @@ static int fr_dict_finalise(dict_tokenize_ctx_t *ctx)
 			/*
 			 *	Look up the attribute.
 			 */
-			da = dict_attr_by_name(NULL, fr_dict_root(dict), this->ref + slen + 1);
+			da = fr_dict_attr_by_oid(NULL, fr_dict_root(dict), this->ref + slen + 1);
 			if (!da) {
 				fr_strerror_printf("No such attribute '%s' in reference at %s[%d]",
 						   this->ref + slen + 1, fr_cwd_strip(this->filename), this->line);
@@ -1893,7 +1891,7 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 			fr_strerror_printf("Invalid entry");
 
 		error:
-			fr_strerror_printf_push("Error reading %s[%d]", fr_cwd_strip(fn), line);
+			fr_strerror_printf_push("Failed parsing dictionary at %s[%d]", fr_cwd_strip(fn), line);
 			fclose(fp);
 			return -1;
 		}
@@ -2214,8 +2212,7 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 
 			da = dict_attr_by_name(NULL, fr_dict_root(ctx->dict), argv[1]);
 			if (!da) {
-				fr_strerror_printf_push("Unknown attribute '%s' in context %s",
-							argv[1], fr_dict_root(ctx->dict)->name);
+				fr_strerror_printf_push("Failed resolving attribute in BEGIN-TLV entry");
 				goto error;
 			}
 
@@ -2248,10 +2245,9 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 				goto error;
 			}
 
-			da = dict_attr_by_name(NULL, fr_dict_root(ctx->dict), argv[1]);
+			da = fr_dict_attr_by_oid(NULL, fr_dict_root(ctx->dict), argv[1]);
 			if (!da) {
-				fr_strerror_printf_push("Unknown attribute '%s' in context %s",
-							argv[1], fr_dict_root(ctx->dict)->name);
+				fr_strerror_printf_push("Failed resolving attribute in END-TLV entry");
 				goto error;
 			}
 
@@ -2310,15 +2306,14 @@ static int _dict_from_file(dict_tokenize_ctx_t *ctx,
 			 */
 			if (argc > 2) {
 				if (strncmp(argv[2], "parent=", 7) != 0) {
-					fr_strerror_printf_push("Invalid format %s", argv[2]);
+					fr_strerror_printf_push("BEGIN-VENDOR invalid argument (%s)", argv[2]);
 					goto error;
 				}
 
 				p = argv[2] + 7;
-				da = dict_attr_by_name(NULL, ctx->stack[ctx->stack_depth].da, p);
+				da = fr_dict_attr_by_oid(NULL, ctx->stack[ctx->stack_depth].da, p);
 				if (!da) {
-					fr_strerror_printf_push("Invalid format for BEGIN-VENDOR: Unknown "
-								"parent attribute '%s'", p);
+					fr_strerror_printf_push("BEGIN-VENDOR invalid argument (%s)", argv[2]);
 					goto error;
 				}
 
@@ -2729,7 +2724,7 @@ int fr_dict_parse_str(fr_dict_t *dict, char *buf, fr_dict_attr_t const *parent)
 			return -1;
 		}
 
-		if (!dict_attr_by_name(NULL, fr_dict_root(dict), argv[1])) {
+		if (!fr_dict_attr_by_oid(NULL, fr_dict_root(dict), argv[1])) {
 			fr_strerror_printf("Attribute '%s' does not exist in dictionary \"%s\"",
 					   argv[1], dict->root->name);
 			goto error;

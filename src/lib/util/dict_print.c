@@ -84,7 +84,7 @@ ssize_t fr_dict_snprint_flags(fr_sbuff_t *out, fr_dict_t const *dict, fr_type_t 
  *	- <= 0 The number of bytes we would have needed to write the
  *        next OID component.
  */
-ssize_t fr_dict_print_attr_oid(fr_sbuff_t *out, fr_dict_attr_t const *ancestor, fr_dict_attr_t const *da)
+ssize_t fr_dict_attr_oid_print(fr_sbuff_t *out, fr_dict_attr_t const *ancestor, fr_dict_attr_t const *da)
 {
 	int			i;
 	int			depth = 0;
