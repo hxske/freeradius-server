@@ -161,6 +161,17 @@ static int dict_attr_debug(fr_dict_attr_t const *da, void *uctx)
 	return 0;
 }
 
+void fr_dict_namespace_debug(fr_dict_attr_t const *da)
+{
+	fr_dict_attr_debug_t    uctx = { .dict = fr_dict_by_da(da), .start_depth = da->depth };
+	fr_hash_table_t		*namespace;
+
+	namespace = dict_attr_namespace(da);
+	if (!namespace) FR_FAULT_LOG("%s does not have namespace", da->name);
+
+	fr_hash_table_walk(namespace, (fr_hash_table_walk_t)dict_attr_debug, &uctx);
+}
+
 void fr_dict_attr_debug(fr_dict_attr_t const *da)
 {
 	fr_dict_attr_debug_t uctx = { .dict = fr_dict_by_da(da), .start_depth = da->depth };
