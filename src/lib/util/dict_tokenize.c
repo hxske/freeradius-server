@@ -2564,7 +2564,7 @@ int fr_dict_internal_afrom_file(fr_dict_t **out, char const *dict_subdir)
 		}
 
 		if (dict_attr_add_to_namespace(dict, dict->root, n) < 0) {
-			fr_strerror_printf("Failed inserting \"%s\" into internal dictionary", type_name);
+			fr_strerror_printf_push("Failed inserting '%s' into internal dictionary", type_name);
 			talloc_free(type_name);
 			goto error;
 		}
