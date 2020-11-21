@@ -194,9 +194,19 @@ error:
 }
 
 fr_table_num_sorted_t const map_assignment_op_table[] = {
+	{ L("!*"),	T_OP_CMP_FALSE		},
+	{ L("!="),	T_OP_NE			},
+	{ L("!~"),	T_OP_REG_NE		},
 	{ L("+="),	T_OP_ADD		},
 	{ L(":="),	T_OP_SET		},
+	{ L("<"),	T_OP_LT			},
+	{ L("<="),	T_OP_LE			},
 	{ L("="),	T_OP_EQ			},
+	{ L("=*"),	T_OP_CMP_TRUE		},
+	{ L("=="),	T_OP_CMP_EQ		},
+	{ L("=~"),	T_OP_REG_EQ		},
+	{ L(">"),	T_OP_GT			},
+	{ L(">="),	T_OP_GE			}
 };
 size_t map_assignment_op_table_len = NUM_ELEMENTS(map_assignment_op_table);
 
@@ -348,7 +358,7 @@ int map_afrom_sbuff(TALLOC_CTX *ctx, map_t **out, fr_sbuff_t *in,
 	 *	Parse operator.
 	 */
 	fr_sbuff_out_by_longest_prefix(&slen, &map->op, op_table, &sbuff, 0);
-	if (slen == 0) {
+	if (slen <= 0) {
 		fr_strerror_printf("Invalid operator");
 		goto error;
 	}
