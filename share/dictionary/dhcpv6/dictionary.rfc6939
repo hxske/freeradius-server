@@ -34,7 +34,7 @@ MEMBER		Address						octets
 STRUCT		Arcnet				Type	7
 MEMBER		Address						octets
 
-STRUCR		Hyperchannel			Type	8
+STRUCT		Hyperchannel			Type	8
 MEMBER		Address						octets
 
 STRUCT		Lanstar				Type	9
